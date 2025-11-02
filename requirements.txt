@@ -1,4 +1,4 @@
-streamlit
 yfinance
+streamlit
 pandas
 matplotlib
