@@ -1,0 +1,40 @@
+import streamlit as st
+import yfinance as yf
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Title
+st.title("📈 Stock Market Data Viewer")
+
+# Sidebar inputs
+st.sidebar.header("Select Stock & Date Range")
+
+symbol = st.sidebar.text_input("Enter Stock Symbol (e.g. NIFTY.NS, AAPL, TSLA)", "NIFTY.NS")
+start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2021-01-01"))
+end_date = st.sidebar.date_input("End Date", pd.to_datetime("today"))
+
+# Fetch data button
+if st.sidebar.button("Fetch Data"):
+    try:
+        data = yf.download(symbol, start=start_date, end=end_date)
+        if data.empty:
+            st.warning("No data found for the given symbol or date range. Try a different one.")
+        else:
+            st.success(f"Data fetched successfully for {symbol}")
+            st.dataframe(data.tail())  # Show last few rows
+            
+            # Plot closing price
+            st.subheader(f"{symbol} Closing Price Chart")
+            st.line_chart(data["Close"])
+            
+            # Moving averages
+            st.subheader("📊 Moving Averages (20 & 50 days)")
+            data["MA20"] = data["Close"].rolling(20).mean()
+            data["MA50"] = data["Close"].rolling(50).mean()
+            st.line_chart(data[["Close", "MA20", "MA50"]])
+            
+    except Exception as e:
+        st.error(f"Error fetching data: {e}")
+
+st.markdown("---")
+st.caption("Built by Chaitali Khavanekar using Streamlit + yFinance 🚀")
