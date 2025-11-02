@@ -1,3 +1,4 @@
+
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -61,7 +62,16 @@ else:
     latest_close = data["Close"].iloc[-1]
     prev_close = data["Close"].iloc[-2] if len(data) > 1 else latest_close
     change = latest_close - prev_close
+    # --- Calculate performance indicators safely ---
+if len(data) > 1:
+    latest_close = float(data["Close"].iloc[-1])
+    prev_close = float(data["Close"].iloc[-2])
+    change = latest_close - prev_close
     pct_change = (change / prev_close) * 100 if prev_close != 0 else 0
+else:
+    latest_close = float(data["Close"].iloc[-1])
+    change = 0
+    pct_change = 0
 
     if change > 0:
         st.metric("📈 Today's Change", f"+{change:.2f}", f"{pct_change:.2f}% ↑")
