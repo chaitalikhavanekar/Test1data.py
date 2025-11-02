@@ -1,0 +1,6 @@
+yfinance 
+pandas 
+numpy 
+requests 
+requests_cache
+matplotib
