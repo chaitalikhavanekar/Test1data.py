@@ -1,127 +1,59 @@
 import streamlit as st
-
-st.set_page_config(page_title="Finance Data Fetcher", layout="wide")
-st.write("🔄 Fetching financial data... please wait!")
 import yfinance as yf
 import pandas as pd
-import requests_cache
+import datetime
 
-# Cache requests for faster performance
-requests_cache.install_cache('yfinance_cache', expire_after=1800)
+st.set_page_config(page_title="Global Index Dashboard", layout="wide")
 
-st.title("📊 Stock Data Viewer")
+st.title("🌍 Global Market Index Dashboard (2020–2025)")
+st.markdown("**Live-updating dashboard for NIFTY 50, Dow Jones, and NASDAQ — with real-time data from Yahoo Finance.**")
 
-ticker = st.text_input("Enter Stock Symbol", "AAPL")
+# --- Sidebar Controls ---
+st.sidebar.header("📅 Time Range Selector")
 
-if st.button("Fetch Data"):
-    st.info("Fetching data, please wait...")
-    data = yf.download(ticker, start="2024-01-01", end="2024-03-01")
-    st.line_chart(data["Close"])
-    st.success("Data fetched successfully!")
-# data_fetcher.py
-"""
-Simplified data fetcher for financial data.
-Works perfectly on Android (Pydroid 3).
-"""
+range_option = st.sidebar.selectbox(
+    "Select Time Range",
+    ["5 Years", "1 Year", "6 Months", "1 Month", "1 Week", "1 Day"]
+)
 
-import pandas as pd
-import numpy as np
-import requests
-import yfinance as yf
-import requests_cache
-from datetime import datetime
+# --- Determine Date Range ---
+today = datetime.date.today()
+if range_option == "5 Years":
+    start_date = today - datetime.timedelta(days=5 * 365)
+elif range_option == "1 Year":
+    start_date = today - datetime.timedelta(days=365)
+elif range_option == "6 Months":
+    start_date = today - datetime.timedelta(days=180)
+elif range_option == "1 Month":
+    start_date = today - datetime.timedelta(days=30)
+elif range_option == "1 Week":
+    start_date = today - datetime.timedelta(days=7)
+else:
+    start_date = today - datetime.timedelta(days=1)
 
-# Enable cache to speed up repeat API calls
-requests_cache.install_cache("fetch_cache", expire_after=60 * 60 * 6)  # 6 hours
+# --- Index List ---
+indices = {
+    "^NSEI": "NIFTY 50 🇮🇳",
+    "^DJI": "Dow Jones 🇺🇸",
+    "^IXIC": "NASDAQ 🇺🇸"
+}
 
-# -------------------------
-# 1. Fetch stock / index data using Yahoo Finance
-# -------------------------
-def get_price_series_yf(ticker: str, start: str = "2018-01-01", end: str = None, interval: str = "1d"):
-    """
-    Fetch price data for a stock/index (NIFTY, NASDAQ, etc.)
-    Example: df = get_price_series_yf("^NSEI")
-    """
-    if end is None:
-        end = datetime.now().strftime("%Y-%m-%d")
+# --- Fetch Data ---
+st.sidebar.write(f"Fetching data from **{start_date}** to **{today}**")
+st.caption("🔁 Data refreshes automatically each time you reload this page (real-time market updates).")
 
+for symbol, name in indices.items():
+    st.subheader(f"{name} — {range_option} Chart")
     try:
-        df = yf.download(ticker, start=start, end=end, interval=interval, progress=False, threads=False)
-        if df.empty:
-            raise ValueError(f"No data returned for {ticker}")
-        df.index = pd.to_datetime(df.index)
-        return df
+        data = yf.download(symbol, start=start_date, end=today)
+        if not data.empty:
+            st.line_chart(data["Close"])
+            st.write("**Summary Statistics:**")
+            st.dataframe(data.describe())
+        else:
+            st.warning(f"⚠️ No data found for {name}.")
     except Exception as e:
-        print(f"Error fetching {ticker}: {e}")
-        return pd.DataFrame()
+        st.error(f"Error fetching data for {name}: {e}")
 
-# -------------------------
-# 2. Fetch Indian Mutual Fund NAVs (from AMFI)
-# -------------------------
-def get_amfi_navs():
-    """
-    Fetches Indian mutual fund NAV data from AMFI official source.
-    Returns full DataFrame with columns like SchemeName, NAV, Date.
-    """
-    url = "https://www.amfiindia.com/spages/NAVAll.txt"
-    try:
-        r = requests.get(url, timeout=10)
-        r.raise_for_status()
-        data = r.text.splitlines()
-        rows = []
-        for line in data[1:]:
-            parts = line.split(";")
-            if len(parts) >= 6:
-                rows.append(parts[:6])
-        df = pd.DataFrame(rows, columns=["SchemeCode", "RTACode", "ISIN", "SchemeName", "NAV", "Date"])
-        df["NAV"] = pd.to_numeric(df["NAV"], errors="coerce")
-        df["Date"] = pd.to_datetime(df["Date"], format="%d-%b-%Y", errors="coerce")
-        df = df.dropna(subset=["NAV", "Date"])
-        return df
-    except Exception as e:
-        print(f"Error fetching AMFI data: {e}")
-        return pd.DataFrame()
-
-# -------------------------
-# 3. Compute CAGR (return) and volatility
-# -------------------------
-def compute_cagr_and_vol(df: pd.DataFrame):
-    """
-    Compute CAGR and annualized volatility for the given price DataFrame.
-    Returns: (CAGR, Volatility)
-    """
-    if df is None or df.empty:
-        return None, None
-
-    col = "Adj Close" if "Adj Close" in df.columns else "Close"
-    if col not in df.columns:
-        print("No Close column found")
-        return None, None
-
-    close = df[col].dropna()
-    if len(close) < 10:
-        return None, None
-
-    total_years = (close.index[-1] - close.index[0]).days / 365.25
-    if total_years <= 0:
-        return None, None
-
-    cagr = (close.iloc[-1] / close.iloc[0]) ** (1.0 / total_years) - 1.0
-    vol = close.pct_change().dropna().std() * np.sqrt(252)
-    return round(cagr * 100, 2), round(vol * 100, 2)
-
-# -------------------------
-# 4. Example: test function
-# -------------------------
-if __name__ == "__main__":
-    print("Fetching NIFTY 50 data...")
-    df_nifty = get_price_series_yf("^NSEI", start="2020-01-01")
-    print(df_nifty.tail())
-
-    cagr, vol = compute_cagr_and_vol(df_nifty)
-    print(f"CAGR: {cagr}% | Volatility: {vol}%")
-
-    # Uncomment below to test mutual fund data
-    # print("Fetching AMFI NAVs...")
-    # df_amfi = get_amfi_navs()
-    # print(df_amfi.head())
+# --- Sidebar Info ---
+st.sidebar.info("💡 Tip: Use the sidebar to switch time ranges (5Y / 1Y / 6M / 1M / 1W / 1D).")
