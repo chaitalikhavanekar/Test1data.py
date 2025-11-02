@@ -1,114 +1,79 @@
-
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import datetime as dt
-import numpy as np
+import datetime
 
-st.set_page_config(page_title="📊 Real-Time Stock Dashboard", layout="wide")
+st.set_page_config(page_title="📈 Global Market Tracker", layout="wide")
 
-st.title("📈 Real-Time Stock & Index Dashboard")
+st.title("🌍 Global Market Dashboard")
 
-# Sidebar input section
-st.sidebar.header("🔍 Customize Your View")
+# --- Stock Options ---
+markets = {
+    "NIFTY 50 (India)": "^NSEI",
+    "NASDAQ (US)": "^IXIC",
+    "DOW JONES (US)": "^DJI"
+}
 
-# Stock symbol input
-symbol = st.sidebar.text_input("Enter Stock Symbol (e.g. ^NSEI, RELIANCE.NS, ^BSESN)", "^NSEI")
+# --- Sidebar Controls ---
+st.sidebar.header("⚙️ Controls")
+market_name = st.sidebar.selectbox("Select Market Index", list(markets.keys()))
+symbol = markets[market_name]
 
-# Time range selection
-time_range = st.sidebar.selectbox(
-    "Select Time Range",
-    ["1 Day", "1 Week", "1 Month", "6 Months", "1 Year", "2 Years", "3 Years", "4 Years", "5 Years"]
-)
+# Time period selector
+time_options = {
+    "1 Day": "1d",
+    "1 Week": "7d",
+    "1 Month": "1mo",
+    "6 Months": "6mo",
+    "1 Year": "1y",
+    "2 Years": "2y",
+    "3 Years": "3y",
+    "4 Years": "4y",
+    "5 Years": "5y"
+}
+selected_time = st.sidebar.selectbox("Select Time Range", list(time_options.keys()))
 
-# Calculate date range
-end_date = dt.date.today()
-if time_range == "1 Day":
-    start_date = end_date - dt.timedelta(days=1)
-elif time_range == "1 Week":
-    start_date = end_date - dt.timedelta(weeks=1)
-elif time_range == "1 Month":
-    start_date = end_date - dt.timedelta(days=30)
-elif time_range == "6 Months":
-    start_date = end_date - dt.timedelta(days=182)
-elif time_range == "1 Year":
-    start_date = end_date - dt.timedelta(days=365)
-elif time_range == "2 Years":
-    start_date = end_date - dt.timedelta(days=730)
-elif time_range == "3 Years":
-    start_date = end_date - dt.timedelta(days=1095)
-elif time_range == "4 Years":
-    start_date = end_date - dt.timedelta(days=1460)
-else:
-    start_date = end_date - dt.timedelta(days=1825)
+# --- Fetch Data ---
+st.info(f"Fetching data for **{market_name} ({symbol})**...")
 
-st.sidebar.write(f"🗓 Showing data from **{start_date}** to **{end_date}**")
-
-# Fetch data
-st.info("⏳ Fetching latest stock data...")
-data = yf.download(symbol, start=start_date, end=end_date, progress=False, interval="1d")
-
-if data.empty:
-    st.error("⚠️ No data found for this symbol. Try another one (e.g., ^NSEI, ^BSESN, RELIANCE.NS).")
-else:
-    st.success("✅ Data fetched successfully!")
-
-    # Basic stock info
-    stock_info = yf.Ticker(symbol).info
-    st.subheader(f"🏦 {stock_info.get('longName', symbol)} ({symbol})")
-    st.caption(f"Exchange: {stock_info.get('exchange', 'N/A')} | Currency: {stock_info.get('currency', 'INR')}")
-
-    # Calculate performance indicators
-    latest_close = data["Close"].iloc[-1]
-    prev_close = data["Close"].iloc[-2] if len(data) > 1 else latest_close
-    change = latest_close - prev_close
-    # --- Calculate performance indicators safely ---
-if len(data) > 1:
-    latest_close = float(data["Close"].iloc[-1])
-    prev_close = float(data["Close"].iloc[-2])
-    change = latest_close - prev_close
-    pct_change = (change / prev_close) * 100 if prev_close != 0 else 0
-else:
-    latest_close = float(data["Close"].iloc[-1])
-    change = 0
-    pct_change = 0
-
-    if change > 0:
-        st.metric("📈 Today's Change", f"+{change:.2f}", f"{pct_change:.2f}% ↑")
-    elif change < 0:
-        st.metric("📉 Today's Change", f"{change:.2f}", f"{pct_change:.2f}% ↓")
+try:
+    data = yf.download(symbol, period=time_options[selected_time], interval="1d")
+    if data.empty:
+        st.error("⚠️ No data available for this range.")
     else:
-        st.metric("⏸ No Change", "0.00", "0.00%")
+        # Clean Data
+        data.reset_index(inplace=True)
+        data.rename(columns={"Close": "Close Price"}, inplace=True)
 
-    # Convert volume to crores for Indian stocks
-    if symbol.endswith(".NS") or symbol.startswith("^NSE"):
-        data["Volume (Cr)"] = data["Volume"] / 10_000_000
-    else:
-        data["Volume (Cr)"] = data["Volume"]
+        # --- Summary Stats ---
+        st.subheader("📊 Summary Statistics")
+        st.dataframe(data.describe())
 
-    # Rename columns
-    data = data.rename(columns={
-        "Open": "Open Price",
-        "High": "High Price",
-        "Low": "Low Price",
-        "Close": "Close Price",
-        "Adj Close": "Adjusted Close",
-    })
+        # --- Chart ---
+        st.subheader("📈 Price Movement Chart")
+        st.line_chart(data.set_index("Date")["Close Price"])
 
-    # Chart section
-    st.subheader(f"📊 {symbol} Price Chart ({time_range})")
-    st.line_chart(data["Close Price"], use_container_width=True)
+        # --- Performance Summary ---
+        st.subheader("💡 Performance Summary")
 
-    # Performance summary
-    st.subheader("📈 Performance Summary")
+        latest_close = float(data["Close Price"].iloc[-1])
+        prev_close = float(data["Close Price"].iloc[-2]) if len(data) > 1 else latest_close
+        change = latest_close - prev_close
+        pct_change = (change / prev_close) * 100 if prev_close != 0 else 0
 
-    total_years = (data.index[-1] - data.index[0]).days / 365.25
-    cagr = ((data["Close Price"].iloc[-1] / data["Close Price"].iloc[0]) ** (1/total_years) - 1) * 100
-    volatility = data["Close Price"].pct_change().std() * np.sqrt(252) * 100
+        # Handle zero division safely
+        total_days = (data["Date"].iloc[-1] - data["Date"].iloc[0]).days
+        total_years = total_days / 365 if total_days > 0 else 1
 
-    st.write(f"**CAGR (5Y Avg Return):** {cagr:.2f}%")
-    st.write(f"**Annualized Volatility:** {volatility:.2f}%")
+        cagr = (((data["Close Price"].iloc[-1] / data["Close Price"].iloc[0]) ** (1 / total_years)) - 1) * 100
 
-    # Recent daily data
-    st.subheader("📅 Latest Daily Data")
-    st.dataframe(data.tail(10))
+        st.metric("Latest Close", f"{latest_close:,.2f}")
+        st.metric("Daily Change", f"{change:+.2f}")
+        st.metric("Daily % Change", f"{pct_change:+.2f}%")
+        st.metric("CAGR (since start)", f"{cagr:.2f}%")
+
+        # --- Notes ---
+        st.caption("💬 *All values are in local market currency (INR for NSEI, USD for NASDAQ/DOW JONES)*")
+
+except Exception as e:
+    st.error(f"❌ Error fetching data: {e}")
