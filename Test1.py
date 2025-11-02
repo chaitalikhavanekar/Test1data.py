@@ -1,3 +1,23 @@
+import streamlit as st
+
+st.set_page_config(page_title="Finance Data Fetcher", layout="wide")
+st.write("🔄 Fetching financial data... please wait!")
+import yfinance as yf
+import pandas as pd
+import requests_cache
+
+# Cache requests for faster performance
+requests_cache.install_cache('yfinance_cache', expire_after=1800)
+
+st.title("📊 Stock Data Viewer")
+
+ticker = st.text_input("Enter Stock Symbol", "AAPL")
+
+if st.button("Fetch Data"):
+    st.info("Fetching data, please wait...")
+    data = yf.download(ticker, start="2024-01-01", end="2024-03-01")
+    st.line_chart(data["Close"])
+    st.success("Data fetched successfully!")
 # data_fetcher.py
 """
 Simplified data fetcher for financial data.
