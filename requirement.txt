@@ -1,6 +1,4 @@
-yfinance 
-pandas 
-numpy 
-requests 
-requests_cache
-matplotib
+streamlit
+yfinance
+pandas
+matplotlib
