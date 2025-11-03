@@ -9,3 +9,4 @@ lxml
 openpyxl
 reportlab
 pytz
+python-dotenv
