@@ -216,7 +216,8 @@ with tabs[0]:
             else:
                 last = data["Close"].iloc[-1]
                 prev = data["Close"].iloc[-2] if len(data) > 1 else last
-                delta = (last - prev)/prev*100 if prev != 0 else 0
+               import numpy as np
+delta = np.where(prev != 0, (last - prev) / prev * 100, 0)
                 col.metric(name, f"{last:,.2f}", f"{delta:+.2f}%")
 
     st.markdown("---")
