@@ -1,4 +1,4 @@
-streamlit
+streamlit>=1.20
 pandas
 numpy
 requests
@@ -10,3 +10,7 @@ vaderSentiment
 python-dotenv
 openpyxl
 scikit-learn
+pycountry
+plotly-express
+geopandas
+folium
