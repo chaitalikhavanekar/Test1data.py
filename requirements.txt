@@ -1,12 +1,9 @@
 streamlit
-pandas
 yfinance
-numpy
-plotly
-requests
+pandas
+matplotlib
 requests_cache
-beautifulsoup4
-lxml
-altair
-openpyxl
 python-dotenv
+requests
+plotly
+openpyxl
