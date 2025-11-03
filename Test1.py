@@ -22,7 +22,23 @@ import yfinance as yf
 import plotly.express as px
 import streamlit as st
 from dotenv import load_dotenv
+# --- MOSPI API Setup ---
+import requests
 
+API_KEY = "579b464db66ec23bdd0000011174991952a945c65c2d95c58efe0f0"  # 🟢 paste your key here
+RESOURCE_ID = "9ef84268-d588-465a-a308-a864a43d0070"  # example: CPI data
+
+def fetch_mospi_data():
+    """Fetch real-time data from MOSPI/Data.gov.in API"""
+    url = f"https://api.data.gov.in/resource/{RESOURCE_ID}?format=json&api-key={API_KEY}&limit=1000"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        records = data.get("records", [])
+        return pd.DataFrame(records)
+    else:
+        st.error("Failed to fetch data from MOSPI API")
+        return pd.DataFrame()
 # Load .env if present
 load_dotenv()
 
