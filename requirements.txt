@@ -1,5 +1,30 @@
+# Core dependencies
 streamlit
-yfinance
 pandas
+yfinance
+numpy
 matplotlib
+plotly
+requests
 requests_cache
+
+# For data handling & automation
+beautifulsoup4
+lxml
+
+# For API data (India Gov & MOSPI)
+json
+pycountry
+geopandas
+folium
+
+# For visualization
+altair
+plotly-express
+
+# For file export
+openpyxl
+reportlab
+
+# For scheduling auto-updates
+apscheduler
